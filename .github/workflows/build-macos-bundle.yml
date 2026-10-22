@@ -34,9 +34,16 @@ jobs:
           BIN="Runtime/Plugins/macOS/NativeTooltipsMac.bundle/Contents/MacOS/NativeTooltipsMac"
           lipo -info "$BIN"
           lipo "$BIN" -verify_arch arm64 x86_64
+          # Minimum macOS per slice. Targets below 10.14 are stored in the older LC_VERSION_MIN_MACOSX load command
+          # ("version"), newer ones in LC_BUILD_VERSION ("minos"). arm64 can't go below 11.0 (the first macOS on
+          # Apple Silicon), so the linker raises it to 11.0 — expected.
           for ARCH in arm64 x86_64; do
-            echo "== $ARCH"
-            vtool -arch "$ARCH" -show-build "$BIN" | grep -E "platform|minos"
+            MIN=$(otool -arch "$ARCH" -l "$BIN" | awk '/LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX/ { f = 1 } f && $1 ~ /^(minos|version)$/ { print $2; exit }')
+            echo "$ARCH: minimum macOS ${MIN:-unknown}"
+            case "$ARCH:$MIN" in
+              arm64:11.0|x86_64:10.13) ;;
+              *) echo "::error::Unexpected minimum macOS for $ARCH: '${MIN}'"; exit 1 ;;
+            esac
           done
           nm -gU "$BIN" | grep -E "NTMac_(Version|Initialize|SetToolTip|CustomPrepare|CustomShowAt|CustomHide|GetGeometry)"
           codesign --verify --verbose "Runtime/Plugins/macOS/NativeTooltipsMac.bundle"
