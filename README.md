@@ -1,4 +1,4 @@
-![UnityNativeTooltips Logo](https://github.com/Muppetsg2/UnityNativeTooltips/blob/main/.github/unity-native-tooltips.svg)
+<img alt="UnityNativeTooltips Logo" src="https://github.com/Muppetsg2/UnityNativeTooltips/blob/main/.github/unity-native-tooltips.svg" width="200">
 
 # UnityNativeTooltips
 
