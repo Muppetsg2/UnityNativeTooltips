@@ -151,6 +151,13 @@ namespace NativeTooltips
         public static CustomWindowMode CustomWindowMode = CustomWindowMode.WhenNeeded;
 
         /// <summary>
+        /// WebGL: whether the custom bubble copies the browser's own tooltip (default — e.g. Opera GX,
+        /// Chrome / Edge on Windows) or the operating system's tooltip. The detected browser is shown in
+        /// <see cref="Tooltip.BackendName"/>. Explicit <see cref="TooltipStyle"/> colours always win.
+        /// </summary>
+        public static WebGLBubbleTheme WebGLBubbleTheme = WebGLBubbleTheme.Browser;
+
+        /// <summary>
         /// Interpret Unity-style rich text tags in tooltip texts and titles: <c>&lt;b&gt;</c>, <c>&lt;i&gt;</c>,
         /// <c>&lt;u&gt;</c>, <c>&lt;s&gt;</c>, <c>&lt;color=#FF0000&gt;</c>, <c>&lt;size=16&gt;</c>, <c>&lt;noparse&gt;</c>.
         /// Text without tags is unaffected (and stays on the plain native path). When off, tags are shown literally.

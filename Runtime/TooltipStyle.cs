@@ -132,6 +132,20 @@ namespace NativeTooltips
         Never
     }
 
+    /// <summary>Which look the WebGL custom bubble copies (see <see cref="TooltipSettings.WebGLBubbleTheme"/>).</summary>
+    public enum WebGLBubbleTheme
+    {
+        /// <summary>
+        /// Look like the browser's own <c>title</c> tooltip: Chromium-based browsers on Windows / Linux
+        /// (Chrome, Brave, Vivaldi, Opera) draw it themselves, Edge and Opera GX in their own colours, Firefox on
+        /// Windows draws its own rounded one; every browser on macOS shows the OS tooltip.
+        /// </summary>
+        Browser,
+
+        /// <summary>Always look like the operating system's tooltip (macOS, Windows 11, or a neutral dark bubble).</summary>
+        OperatingSystem
+    }
+
     /// <summary>Features a backend can honour. Query with <see cref="Tooltip.Supports"/>.</summary>
     [Flags]
     public enum TooltipFeature

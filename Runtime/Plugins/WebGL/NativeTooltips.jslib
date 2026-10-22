@@ -4,9 +4,10 @@
 // <canvas> when a UI element is hovered and remove it on exit — the delay, look and position come
 // from the browser/OS (Chrome, Firefox, Safari, Edge).
 //
-// Custom bubble: a <div> styled like the OS tooltip (macOS, Windows 11 or a neutral dark bubble;
-// light/dark via prefers-color-scheme). Used when a TooltipStyle needs it, for Tooltip.Show() and for
-// touch long-press (browsers have no touch tooltips). Placement is computed in C#.
+// Custom bubble: a <div> styled like the browser's own tooltip (Chromium-based browsers on Windows/Linux
+// draw it themselves, Edge and Opera GX in their colours, Firefox on Windows its own) or like the OS tooltip (macOS, Windows 11 or a neutral dark
+// bubble); light/dark via prefers-color-scheme. Used when a TooltipStyle needs it, for Tooltip.Show() and
+// for touch long-press (browsers have no touch tooltips). Placement is computed in C#.
 
 var NativeTooltipsLib = {
   $NativeTooltipsState: {
@@ -31,36 +32,126 @@ var NativeTooltipsLib = {
       return NativeTooltipsState.canvas;
     },
 
-    platform: function () {
-      var ua = (navigator.userAgent || '') + ' ' + (navigator.platform || '');
-      if (/iPhone|iPad|iPod|Android/i.test(ua)) return 'mobile';
-      if (/Mac/i.test(ua)) return 'mac';
-      if (/Win/i.test(ua)) return 'windows';
-      return 'other';
+    env: null,
+
+    // Which browser and OS the page runs in. Opera GX can only be told apart from Opera through
+    // navigator.userAgentData.brands (secure contexts only: https or localhost) — see github.com/opera-gaming/gx-detect.
+    environment: function () {
+      if (NativeTooltipsState.env) return NativeTooltipsState.env;
+      var ua = navigator.userAgent || '';
+      var all = ua + ' ' + (navigator.platform || '');
+      var uad = navigator.userAgentData;
+      var brands = (uad && uad.brands) || [];
+      var brand = function (name) {
+        for (var i = 0; i < brands.length; i++)
+          if (brands[i] && String(brands[i].brand).indexOf(name) >= 0) return true;
+        return false;
+      };
+
+      var os = /iPhone|iPad|iPod/i.test(all) ? 'ios'
+             : /Android/i.test(all) ? 'android'
+             : /Mac/i.test(all) ? (navigator.maxTouchPoints > 1 ? 'ios' : 'mac') // iPadOS reports "Macintosh"
+             : /Win/i.test(all) ? 'windows'
+             : /Linux|X11|CrOS/i.test(all) ? 'linux' : 'other';
+
+      var browser, name;
+      if (brand('Opera GX'))                                     { browser = 'operagx';  name = 'Opera GX'; }
+      else if (brand('Opera') || /\bOPR\//.test(ua))             { browser = 'chromium'; name = 'Opera'; }
+      else if (brand('Microsoft Edge') || /\bEdg\//.test(ua))    { browser = 'edge';     name = 'Edge'; }
+      else if (/\bFirefox\//.test(ua))                           { browser = 'firefox';  name = 'Firefox'; }
+      else if (brand('Brave') || (navigator.brave && true))      { browser = 'chromium'; name = 'Brave'; }
+      else if (/\bVivaldi\//.test(ua))                           { browser = 'chromium'; name = 'Vivaldi'; }
+      else if (brand('Google Chrome'))                           { browser = 'chromium'; name = 'Chrome'; }
+      else if (/\b(Chrome|Chromium|CriOS)\//.test(ua))           { browser = 'chromium'; name = 'Chromium'; }
+      else if (/\bSafari\//.test(ua))                            { browser = 'safari';   name = 'Safari'; }
+      else                                                       { browser = 'other';    name = 'Browser'; }
+
+      NativeTooltipsState.env = { os: os, browser: browser, name: name };
+      return NativeTooltipsState.env;
     },
 
-    // System-like defaults: font px, padding x/y px, radius px, colours, border, shadow.
-    theme: function () {
+    // Theme key for the bubble. useBrowser = TooltipSettings.WebGLBubbleTheme == Browser.
+    // "?ntTheme=chromium|edge|operagx|firefox|windows|mac|gtk" in the page URL forces one (handy for comparing).
+    themeKey: function (useBrowser) {
+      try {
+        var forced = /[?&]ntTheme=([a-z]+)/i.exec(window.location.search || '');
+        if (forced) return forced[1].toLowerCase();
+      } catch (e) {}
+      var env = NativeTooltipsState.environment();
+      var osTheme = env.os === 'mac' ? 'mac' : env.os === 'windows' ? 'windows' : 'gtk';
+      if (!useBrowser) return osTheme;
+      // On macOS every browser (Chromium included) shows the AppKit tooltip; Firefox draws an OS-like one
+      // everywhere. Chromium-based browsers on Windows / Linux draw their own (views::TooltipAura).
+      if (env.os === 'mac' || env.browser === 'safari') return osTheme;
+      if (env.browser === 'firefox') return env.os === 'windows' ? 'firefox' : osTheme;
+      if (env.os !== 'windows' && env.os !== 'linux') return osTheme;
+      if (env.browser === 'operagx' || env.browser === 'edge' || env.browser === 'chromium') return env.browser;
+      return osTheme;
+    },
+
+    // Defaults per look: font, size px, padding [top, right, bottom, left] px, line height, radius px,
+    // max width px (default 320), colours, border, shadow, backdrop blur.
+    theme: function (key) {
       var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      switch (NativeTooltipsState.platform()) {
+      var env = NativeTooltipsState.environment();
+      var uiFont = env.os === 'windows' ? '"Segoe UI", sans-serif' : 'system-ui, "Segoe UI", Roboto, sans-serif';
+      // TooltipAura wraps at min(800 px, half the screen width).
+      var chromiumMax = Math.min(800, Math.round(((window.screen && window.screen.width) || 1600) / 2));
+      switch (key) {
         case 'mac':
           return {
-            font: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', size: 11, padX: 7, padY: 4, radius: 5,
+            font: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', size: 11, pad: [4, 7, 4, 7],
+            lineHeight: '1.3', radius: 5,
             bg: dark ? 'rgba(48,48,50,0.96)' : 'rgba(246,246,246,0.97)', fg: dark ? '#fff' : '#000',
             border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.15)',
-            shadow: '0 3px 10px rgba(0,0,0,0.22)'
+            shadow: '0 3px 10px rgba(0,0,0,0.22)', blur: true
           };
         case 'windows':
           return {
-            font: '"Segoe UI Variable Text", "Segoe UI", sans-serif', size: 12, padX: 8, padY: 5, radius: 4,
+            font: '"Segoe UI Variable Text", "Segoe UI", sans-serif', size: 12, pad: [5, 8, 5, 8],
+            lineHeight: '1.3', radius: 4,
             bg: dark ? '#2b2b2b' : '#ffffff', fg: dark ? '#ffffff' : '#000000',
             border: dark ? '1px solid #454545' : '1px solid rgba(0,0,0,0.12)',
-            shadow: '0 2px 8px rgba(0,0,0,0.20)'
+            shadow: '0 2px 8px rgba(0,0,0,0.20)', blur: false
           };
-        default:
+        case 'edge':
+          // Same views::TooltipAura as Chromium, in Edge's colours — measured from Edge on Windows: identical in
+          // light and dark mode.
           return {
-            font: 'system-ui, Roboto, "Segoe UI", sans-serif', size: 13, padX: 10, padY: 6, radius: 6,
-            bg: 'rgba(32,32,34,0.92)', fg: '#ffffff', border: 'none', shadow: '0 2px 8px rgba(0,0,0,0.25)'
+            font: uiFont, size: 12, pad: [3, 7, 4, 7], lineHeight: 'normal', radius: 0, maxWidth: chromiumMax,
+            bg: '#333333', fg: '#d7deef', border: '1px solid #d7deef', shadow: 'none', blur: false
+          };
+        case 'firefox':
+          // Firefox on Windows draws its own tooltip — measured from Firefox in light and dark mode. Its
+          // InfoBackground / InfoText system colours are NOT the tooltip colours (#1c1b22 / yellow #ffffe1),
+          // so they can't be read from CSS.
+          return {
+            font: uiFont, size: 12, pad: [2, 3, 2, 3], lineHeight: 'normal', radius: 4, maxWidth: 480,
+            bg: dark ? '#2b2a33' : '#f9f9fb', fg: dark ? '#fbfbfe' : '#000000',
+            border: dark ? '1px solid #f9f9fb' : '1px solid #67676c', shadow: 'none', blur: false
+          };
+        case 'chromium':
+          // views::TooltipViewAura: insets 4/8/5/8 including a 1 px border drawn in the text colour,
+          // square corners, colours from ui::kColorTooltipBackground / kColorTooltipForeground.
+          return {
+            font: uiFont, size: env.os === 'windows' ? 12 : 13, pad: [3, 7, 4, 7], lineHeight: 'normal', radius: 0,
+            maxWidth: chromiumMax,
+            bg: dark ? '#202124' : '#ffffff', fg: dark ? '#cecfd2' : '#222222',
+            border: dark ? '1px solid #cecfd2' : '1px solid #222222',
+            shadow: 'none', blur: false
+          };
+        case 'operagx':
+          // Measured from an Opera GX screenshot on Windows. The tooltip follows the GX theme, which a page can't read,
+          // so other GX colour schemes look different.
+          return {
+            font: uiFont, size: 12, pad: [7, 5, 10, 5], lineHeight: 'normal', radius: 2, maxWidth: chromiumMax,
+            bg: '#181e39', fg: '#a9b2db', border: '1px solid #303c73', shadow: 'none', blur: false
+          };
+        default: // 'gtk' and anything else: Adwaita-like dark bubble
+          return {
+            font: 'system-ui, Roboto, "Segoe UI", sans-serif', size: 13, pad: [6, 10, 6, 10],
+            lineHeight: '1.3', radius: 6,
+            bg: 'rgba(32,32,34,0.92)', fg: '#ffffff', border: 'none', shadow: '0 2px 8px rgba(0,0,0,0.25)', blur: true
           };
       }
     },
@@ -160,9 +251,22 @@ var NativeTooltipsLib = {
     return NativeTooltipsState.findCanvas() ? 1 : 0;
   },
 
+  // "Opera GX, Windows" — returned as a malloc'd UTF-8 string (freed by the C# marshaller).
+  NativeTooltips_Environment__deps: ['$NativeTooltipsState'],
+  NativeTooltips_Environment: function () {
+    var env = NativeTooltipsState.environment();
+    var os = { windows: 'Windows', mac: 'macOS', linux: 'Linux', android: 'Android', ios: 'iOS' }[env.os] || 'unknown OS';
+    var str = env.name + ', ' + os;
+    var size = lengthBytesUTF8(str) + 1;
+    var buffer = _malloc(size);
+    stringToUTF8(str, buffer, size);
+    return buffer;
+  },
+
   // ---------------------------------------------------------------- custom bubble
   // params (float32): 0 fontSize, 1 fontScale, 2 bold, 3 padX, 4 padY, 5 maxWidth, 6 overrideColors,
-  //                   7-10 background rgba, 11-14 text rgba, 15 cornerRadius, 16 richText
+  //                   7-10 background rgba, 11-14 text rgba, 15 cornerRadius, 16 richText,
+  //                   17 theme (0 = browser, 1 = operating system)
 
   NativeTooltips_DivPrepare__deps: ['$NativeTooltipsState'],
   NativeTooltips_DivPrepare: function (textPtr, titlePtr, paramsPtr, count) {
@@ -170,27 +274,29 @@ var NativeTooltipsLib = {
     var S = NativeTooltipsState;
     var d = S.ensureDiv();
     var p = paramsPtr >> 2;
-    var th = S.theme();
+    var th = S.theme(S.themeKey(count < 18 || HEAPF32[p + 17] < 0.5));
 
     var fontSize = HEAPF32[p] > 0 ? HEAPF32[p] : th.size * Math.max(0.1, HEAPF32[p + 1]);
-    var padX = HEAPF32[p + 3] >= 0 ? HEAPF32[p + 3] : th.padX;
-    var padY = HEAPF32[p + 4] >= 0 ? HEAPF32[p + 4] : th.padY;
-    var maxWidth = HEAPF32[p + 5] > 0 ? HEAPF32[p + 5] : 320;
+    var pad = th.pad.slice();
+    if (HEAPF32[p + 3] >= 0) pad[1] = pad[3] = HEAPF32[p + 3];
+    if (HEAPF32[p + 4] >= 0) pad[0] = pad[2] = HEAPF32[p + 4];
+    var maxWidth = HEAPF32[p + 5] > 0 ? HEAPF32[p + 5] : (th.maxWidth || 320);
     var colors = HEAPF32[p + 6] > 0.5;
     var radius = HEAPF32[p + 15] >= 0 ? HEAPF32[p + 15] : th.radius;
 
     var s = d.style;
     s.fontFamily = th.font;
     s.fontSize = fontSize + 'px';
+    s.lineHeight = th.lineHeight;
     s.fontWeight = HEAPF32[p + 2] > 0.5 ? 'bold' : 'normal';
-    s.padding = padY + 'px ' + padX + 'px';
+    s.padding = pad[0] + 'px ' + pad[1] + 'px ' + pad[2] + 'px ' + pad[3] + 'px';
     s.maxWidth = maxWidth + 'px';
     s.borderRadius = radius + 'px';
     s.background = colors ? S.rgba(p, 7) : th.bg;
     s.color = colors ? S.rgba(p, 11) : th.fg;
     s.border = colors ? 'none' : th.border;
     s.boxShadow = th.shadow;
-    s.backdropFilter = colors ? 'none' : 'blur(20px)';
+    s.backdropFilter = colors || !th.blur ? 'none' : 'blur(20px)';
 
     var rich = HEAPF32[p + 16] > 0.5;
     var title = titlePtr ? UTF8ToString(titlePtr) : '';

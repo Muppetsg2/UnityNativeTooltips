@@ -114,6 +114,7 @@ Custom sources (map regions, IMGUI, …): implement `ITooltipSource` and call
 | `Style` | default | Default `TooltipStyle` for every tooltip (see below) |
 | `RichText` | `true` | Interpret `<b>`, `<color>`, … tags (see *Rich text*) |
 | `CustomWindowMode` | `WhenNeeded` | When macOS/WebGL use the custom bubble (see below) |
+| `WebGLBubbleTheme` | `Browser` | WebGL bubble copies the browser's own tooltip (`Browser`) or the OS tooltip (`OperatingSystem`) |
 | `VerboseLogging` | `false` | Log which backend was selected |
 
 ---
@@ -224,8 +225,28 @@ cases the plugin shows a **native-looking custom bubble** instead:
 
 - **macOS** — a borderless, non-activating `NSPanel` with `NSVisualEffectMaterialToolTip` (the system tooltip
   material, light/dark automatically), `+[NSFont toolTipsFontOfSize:]`, the label colour and a system shadow.
-- **WebGL** — a `<div>` styled like the user's OS tooltip (macOS, Windows 11 or a neutral dark bubble;
-  follows `prefers-color-scheme`), with a short fade-in.
+- **WebGL** — a `<div>` styled like the tooltip **of the browser it runs in** (`TooltipSettings.WebGLBubbleTheme`),
+  following `prefers-color-scheme`, with a short fade-in. A web page can't read how the browser draws its
+  tooltip, so the plugin detects the browser (`navigator.userAgentData.brands`, then the user agent) and uses a
+  matching preset:
+
+  | Browser | Who draws the `title` tooltip | Bubble preset |
+  |---|---|---|
+  | Chrome, Brave, Vivaldi, Opera — Windows / Linux | Chromium itself (`views::TooltipAura`) | `chromium`: square, 1 px border in the text colour, Chromium's padding |
+  | Edge — Windows / Linux | Chromium, Edge colours | `edge`: like `chromium` in Edge's colours (the same in light and dark mode) |
+  | Opera GX — Windows / Linux | Chromium, in GX colours | `operagx`: Frutti Di Mare |
+  | Firefox — Windows | Firefox itself | `firefox`: dark (rounded, 1 px border, light border); light (rounded, 1 px border, dark border) |
+  | Firefox — Linux | GTK | `gtk` |
+  | Any browser on macOS (Safari, Chrome, …) | AppKit | `mac` |
+  | Mobile browsers | — (no hover tooltips) | neutral dark bubble |
+
+  The detected browser appears in `Tooltip.BackendName` (e.g. `Browser: Opera GX, Windows (…)`). Opera GX is
+  recognised only in a secure context (https or localhost), where `userAgentData` exists — on plain http it is
+  treated as Opera. Opera GX lets users recolour the browser and a page can't read those colours, so the preset
+  matches one GX theme (navy) and may differ from yours. `WebGLBubbleTheme.OperatingSystem` gives the previous
+  OS-styled bubble (macOS, Windows 11 or a neutral dark bubble). To compare presets in any browser, add
+  `?ntTheme=chromium` (or `edge`, `operagx`, `firefox`, `windows`, `mac`, `gtk`) to the page URL. Colours set in a `TooltipStyle`
+  always win.
 
 `TooltipSettings.CustomWindowMode` decides when:
 
@@ -295,7 +316,8 @@ popover style is forced on iPhone too (the delegate returns `UIModalPresentation
 `passthroughViews` keeps touches reaching the game. Text uses `UIFontTextStyleFootnote` with Dynamic Type.
 
 **WebGL.** We set `title` on the `<canvas>` on hover and restore the previous value on exit. Browsers don't
-show `title` for touch, so long-press on phones (and styled / rich / manual tooltips) use the HTML bubble.
+show `title` for touch, so long-press on phones (and styled / rich / manual tooltips) use the HTML bubble,
+styled after the detected browser's own tooltip (see *Custom bubble on macOS and WebGL*).
 
 ---
 
@@ -341,12 +363,12 @@ UnityNativeTooltips/
 | Platform | Backend | Tested | Notes |
 |---|---|:---:|---|
 | **Unity Editor** | IMGUI fallback | ✅ | Every style option, placements, manual `Tooltip.Show()` |
-| **Windows** (10) | Win32 `tooltips_class32` | ✅ | Themed + coloured (unthemed) tooltips, balloon, placements, font/padding. Rich text (1.2) not yet |
+| **Windows** (10) | Win32 `tooltips_class32` | ✅ | Themed + coloured (unthemed) tooltips, balloon, placements, font/padding, rich text with title + icon |
 | **macOS** | AppKit + custom `NSPanel` | ⬜ | Needs `NativeTooltipsMac.bundle` built on a Mac |
 | **Linux** | GTK 3 | ⬜ | Only automated: rendered on Xvfb (Adwaita), click-through verified via XShape |
 | **Android** | `PopupWindow` (theme tooltip style) | ⬜ | |
 | **iOS / iPadOS** | `UIPopoverPresentationController` | ⬜ | |
-| **WebGL** | `title` attribute + HTML bubble | ⬜ | Only automated: HTML bubble rendered in headless Chromium |
+| **WebGL** | `title` attribute + HTML bubble | ✅ | |
 
 ✅ = tested in a real build / Editor, ⬜ = not tested on a device yet (written against the documented APIs).
 Feedback and test reports for the remaining platforms are welcome.

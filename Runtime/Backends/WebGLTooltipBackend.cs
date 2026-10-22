@@ -11,19 +11,24 @@ namespace NativeTooltips.Backends
     /// (Plugins/WebGL/NativeTooltips.jslib).
     ///
     /// The title attribute can't be styled, placed, shown on demand or shown for touch, so for those
-    /// cases an HTML bubble styled like the OS tooltip is used instead (see
-    /// <see cref="TooltipSettings.CustomWindowMode"/>). Touch long-press always uses it.
+    /// cases an HTML bubble is used instead (see <see cref="TooltipSettings.CustomWindowMode"/>); it copies
+    /// the detected browser's own tooltip or the OS tooltip (<see cref="TooltipSettings.WebGLBubbleTheme"/>).
+    /// Touch long-press always uses it.
     /// </summary>
     internal sealed class WebGLTooltipBackend : ITooltipBackend
     {
-        const int ParamCount = 17; // must match the jslib
+        const int ParamCount = 18; // must match the jslib
 
         readonly float[] _params = new float[ParamCount];
         bool _titleSet;
         bool _divVisible;
         Vector2 _divPos;
 
-        public string Name => "Browser (HTML title attribute + styled bubble)";
+        string _environment;
+
+        public string Name => string.IsNullOrEmpty(_environment)
+            ? "Browser (HTML title attribute + styled bubble)"
+            : "Browser: " + _environment + " (HTML title attribute + styled bubble)";
         public bool IsNative => true;
 
         public TooltipFeature Features =>
@@ -38,7 +43,12 @@ namespace NativeTooltips.Backends
         static bool UseBubble(in TooltipRequest request) =>
             request.Trigger == TooltipTrigger.LongPress || CustomWindowPolicy.UseCustom(request, true);
 
-        public bool Initialize() => NativeTooltips_IsAvailable() != 0;
+        public bool Initialize()
+        {
+            if (NativeTooltips_IsAvailable() == 0) return false;
+            _environment = NativeTooltips_Environment(); // e.g. "Opera GX, Windows"
+            return true;
+        }
 
         public void Show(in TooltipRequest request)
         {
@@ -67,6 +77,7 @@ namespace NativeTooltips.Backends
 
             bool rich = request.HasRichText;
             p[16] = rich ? 1f : 0f;
+            p[17] = TooltipSettings.WebGLBubbleTheme == WebGLBubbleTheme.OperatingSystem ? 1f : 0f;
             string text = rich ? TooltipRichText.Encode(request.TextRuns ?? TooltipRichText.Plain(request.Text)) : request.Text;
             string title = string.IsNullOrEmpty(request.Title)
                 ? null
@@ -143,6 +154,7 @@ namespace NativeTooltips.Backends
         [DllImport("__Internal")] static extern int NativeTooltips_SetTitle(byte[] utf8);
         [DllImport("__Internal")] static extern void NativeTooltips_ClearTitle();
         [DllImport("__Internal")] static extern int NativeTooltips_IsAvailable();
+        [DllImport("__Internal")] static extern string NativeTooltips_Environment();
         [DllImport("__Internal")] static extern int NativeTooltips_DivPrepare(byte[] text, byte[] title, float[] parameters, int count);
         [DllImport("__Internal")] static extern double NativeTooltips_DivSize(int index);
         [DllImport("__Internal")] static extern int NativeTooltips_DivSnapshot();

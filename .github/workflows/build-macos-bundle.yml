@@ -1,0 +1,62 @@
+# Builds Runtime/Plugins/macOS/NativeTooltipsMac.bundle on a GitHub-hosted macOS runner and commits it,
+# so the package can be maintained without a Mac.
+#
+# Runs automatically when the Objective-C source changes, or manually: Actions → Build macOS bundle → Run workflow.
+name: Build macOS bundle
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Runtime/Plugins/macOS/Source~/**'
+
+permissions:
+  contents: write # to commit the built bundle
+
+concurrency:
+  group: build-macos-bundle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build NativeTooltipsMac.bundle (universal, macOS 10.13+)
+        run: |
+          chmod +x "Runtime/Plugins/macOS/Source~/build_macos.sh"
+          "Runtime/Plugins/macOS/Source~/build_macos.sh"
+
+      - name: Verify architectures, minimum macOS and exported API
+        run: |
+          BIN="Runtime/Plugins/macOS/NativeTooltipsMac.bundle/Contents/MacOS/NativeTooltipsMac"
+          lipo -info "$BIN"
+          lipo "$BIN" -verify_arch arm64 x86_64
+          for ARCH in arm64 x86_64; do
+            echo "== $ARCH"
+            vtool -arch "$ARCH" -show-build "$BIN" | grep -E "platform|minos"
+          done
+          nm -gU "$BIN" | grep -E "NTMac_(Version|Initialize|SetToolTip|CustomPrepare|CustomShowAt|CustomHide|GetGeometry)"
+          codesign --verify --verbose "Runtime/Plugins/macOS/NativeTooltipsMac.bundle"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NativeTooltipsMac.bundle
+          path: |
+            Runtime/Plugins/macOS/NativeTooltipsMac.bundle
+            Runtime/Plugins/macOS/NativeTooltipsMac.bundle.meta
+
+      - name: Commit the bundle
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f Runtime/Plugins/macOS/NativeTooltipsMac.bundle Runtime/Plugins/macOS/NativeTooltipsMac.bundle.meta
+          if git diff --cached --quiet; then
+            echo "Bundle unchanged."
+          else
+            git commit -m "Build NativeTooltipsMac.bundle [skip ci]"
+            git push
+          fi
