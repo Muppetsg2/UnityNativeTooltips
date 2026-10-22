@@ -1,0 +1,28 @@
+{
+    "name": "NativeTooltips.Runtime",
+    "rootNamespace": "NativeTooltips",
+    "references": [
+        "UnityEngine.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "NATIVE_TOOLTIPS_INPUT_SYSTEM"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "1.0.0",
+            "define": "NATIVE_TOOLTIPS_UGUI"
+        }
+    ],
+    "noEngineReferences": false
+}

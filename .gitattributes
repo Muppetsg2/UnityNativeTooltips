@@ -1,2 +1,7 @@
-# Auto detect text files and perform LF normalization
+# Normalize line endings; keep shell scripts LF so they run on macOS.
 * text=auto
+*.sh text eol=lf
+*.mm text eol=lf
+
+# Binary macOS plugin
+*.bundle/** binary

@@ -19,3 +19,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+The macOS tooltip technique (fake mouseEntered/mouseExited sent to the tooltip
+manager's tracking-rect owner) is based on the approach used in WebKit's
+WebHTMLView and Chromium's RenderWidgetHostViewCocoa (BSD-style licenses).

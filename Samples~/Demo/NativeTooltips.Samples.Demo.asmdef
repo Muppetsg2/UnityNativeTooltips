@@ -1,0 +1,35 @@
+{
+    "name": "NativeTooltips.Samples.Demo",
+    "rootNamespace": "",
+    "references": [
+        "NativeTooltips.Runtime",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "1.0.0",
+            "define": "NATIVE_TOOLTIPS_TMP"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "NATIVE_TOOLTIPS_TMP"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "NATIVE_TOOLTIPS_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}
