@@ -15,9 +15,7 @@ every other app on the platform: system font, theme, delay, shadow and animation
 | **WebGL** | HTML `title` attribute on the `<canvas>` | The browser's native tooltip | **none** |
 | Editor / other | — | IMGUI fallback bubble | — |
 
-No third-party libraries are needed — every API above ships with the operating system. The only
-*build* step is on macOS: AppKit needs a small Objective-C `NSView` subclass that has to be compiled once
-on a Mac.
+No third-party libraries are needed — every API above ships with the operating system.
 
 ---
 
@@ -26,30 +24,16 @@ on a Mac.
 **Git URL (recommended):** *Window → Package Manager → + → Add package from git URL…*
 
 ```
-https://github.com/<your-github-user>/UnityNativeTooltips.git
+https://github.com/Muppetsg2/UnityNativeTooltips.git
 ```
 
-Pin a version with a tag, e.g. `https://github.com/<your-github-user>/UnityNativeTooltips.git#v1.2.4`.
+Pin a version with a tag, e.g. `https://github.com/Muppetsg2/UnityNativeTooltips.git#v1.0.0`.
 
 **Local:** clone the repo and use *Add package from disk…* → `package.json`, or copy the repo folder into
 your project's `Packages/` folder.
 
 Requirements: Unity **2021.3+** and uGUI (present by default). Works with Mono and IL2CPP, with the legacy
 Input Manager and with the Input System package (detected automatically). TextMeshPro is optional.
-
-### macOS bundle
-
-On a Mac with the Xcode Command Line Tools:
-
-```bash
-cd Runtime/Plugins/macOS/Source~
-./build_macos.sh
-```
-
-This creates `Runtime/Plugins/macOS/NativeTooltipsMac.bundle` (universal arm64 + x86_64) and its `.meta`
-(Standalone macOS only). **Commit the bundle to the repository** — packages installed from a git URL are
-read-only, so users of the package can't build it themselves. Without the bundle the plugin falls back
-to the IMGUI bubble on macOS and logs a warning.
 
 ---
 
@@ -256,8 +240,12 @@ adds rich text and an older bundle is rejected (the plugin falls back to IMGUI w
 
 ### Demo
 
-*Package Manager → Unity Native Tooltips → Samples → Demo → Import.* Add `NativeTooltipsDemo` to an empty
-GameObject in an empty scene and press Play (or build — the Editor shows the IMGUI fallback by default).
+*Package Manager → Unity Native Tooltips → Samples → Demo → Import*, then open
+`Assets/Samples/Unity Native Tooltips/<version>/Demo/Demo.unity` and press Play — the scene already contains a
+GameObject with the `NativeTooltipsDemo` script. To see the native tooltips (the Editor shows the IMGUI fallback
+by default), make a build of the scene or set `TooltipSettings.UseNativeInEditor = true` (Windows, Linux).
+You can also add `NativeTooltipsDemo` to a GameObject in any other scene.
+
 The demo builds Unity's default controls from code — **Button - TextMeshPro** (regular, multi-line,
 long text, non-interactable, live-updating, `Tooltip.Show()`), **styled tooltips** (big text, custom colours,
 title + icon, right-side placement with offset, Windows balloon), **rich text** (with and without a title, plus a plain-text
@@ -307,7 +295,7 @@ popover style is forced on iPhone too (the delegate returns `UIModalPresentation
 `passthroughViews` keeps touches reaching the game. Text uses `UIFontTextStyleFootnote` with Dynamic Type.
 
 **WebGL.** We set `title` on the `<canvas>` on hover and restore the previous value on exit. Browsers don't
-show `title` for touch, so long-press on phones draws the IMGUI bubble.
+show `title` for touch, so long-press on phones (and styled / rich / manual tooltips) use the HTML bubble.
 
 ---
 
@@ -321,6 +309,8 @@ UnityNativeTooltips/
 ├── README.md                      (+ .meta)
 ├── CHANGELOG.md                   (+ .meta)
 ├── LICENSE                        (+ .meta)
+├── .github/workflows/
+│   └── build-macos-bundle.yml     builds NativeTooltipsMac.bundle on a GitHub macOS runner
 ├── Runtime/
 │   ├── NativeTooltips.Runtime.asmdef
 │   ├── Tooltip.cs                 public API + TooltipSettings
@@ -338,9 +328,11 @@ UnityNativeTooltips/
 │           ├── NativeTooltipsMac.bundle   (built on a Mac and committed)
 │           └── Source~/                   .mm source + build_macos.sh (ignored by Unity)
 └── Samples~/Demo/                 importable sample (ignored by Unity until imported)
+    ├── Demo.unity                 ready-to-play scene with the demo object
+    ├── NativeTooltipsDemo.cs      builds the demo UI from code
+    ├── TimeTooltip.cs             dynamic tooltip example
+    └── NativeTooltips.Samples.Demo.asmdef
 ```
-
-Folders ending in `~` are ignored by Unity, so they don't need `.meta` files.
 
 ---
 
@@ -358,14 +350,6 @@ Folders ending in `~` are ignored by Unity, so they don't need `.meta` files.
 
 ✅ = tested in a real build / Editor, ⬜ = not tested on a device yet (written against the documented APIs).
 Feedback and test reports for the remaining platforms are welcome.
-
-Also covered by automated checks: the C# code compiles for every platform combination
-(Windows/macOS/Linux/Android/iOS/WebGL, Editor and player, with and without uGUI / Input System), and the
-driver logic (delays, long-press, auto-hide, switching between elements, manual tooltips, placement / flipping /
-offsets, custom-bubble policy) is unit tested.
-
-Things worth checking first on untested platforms: the macOS "fake enter" technique (proven in WebKit/Chromium,
-but it relies on AppKit internals) and the macOS custom bubble placement.
 
 ## Limitations
 
