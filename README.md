@@ -21,7 +21,7 @@ No third-party libraries are needed — every API above ships with the operating
 
 ## Installation
 
-**Git URL (recommended):** *Window → Package Manager → + → Add package from git URL…*
+**Git URL:** *Window → Package Manager → + → Add package from git URL…*
 
 ```
 https://github.com/Muppetsg2/UnityNativeTooltips.git
@@ -32,6 +32,20 @@ Pin a version with a tag, e.g. `https://github.com/Muppetsg2/UnityNativeTooltips
 > Installing from a git URL requires [Git](https://git-scm.com/downloads) to be installed and available on your
 > `PATH`. Restart Unity (and Unity Hub) after installing Git, otherwise the Package Manager reports
 > *"No 'git' executable was found"*.
+
+**OpenUPM:** install via [OpenUPM CLI](https://openupm.com/):
+
+```bash
+openupm add com.muppetsg2.unitynativetooltips
+```
+
+Or add the scoped registry manually in *Edit → Project Settings → Package Manager*:
+
+* **Name:** `OpenUPM`
+* **URL:** `https://package.openupm.com`
+* **Scope(s):** `com.muppetsg2.unitynativetooltips`
+
+Then open *Window → Package Manager*, switch to *My Registries*, and install **Unity Native Tooltips**.
 
 **Local:** clone the repo and use *Add package from disk…* → `package.json`, or copy the repo folder into
 your project's `Packages/` folder.
