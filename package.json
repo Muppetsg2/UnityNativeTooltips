@@ -23,8 +23,12 @@
     "richtext"
   ],
   "author": {
-    "name": "Muppetsg2"
+    "name": "Muppetsg2",
+    "url": "https://github.com/Muppetsg2"
   },
+  "license": "MIT",
+  "documentationUrl": "https://github.com/Muppetsg2/UnityNativeTooltips#readme",
+  "licensesUrl": "https://github.com/Muppetsg2/UnityNativeTooltips/blob/main/LICENSE",
   "samples": [
     {
       "displayName": "Demo",

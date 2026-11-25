@@ -29,6 +29,10 @@ https://github.com/Muppetsg2/UnityNativeTooltips.git
 
 Pin a version with a tag, e.g. `https://github.com/Muppetsg2/UnityNativeTooltips.git#v1.0.0`.
 
+> Installing from a git URL requires [Git](https://git-scm.com/downloads) to be installed and available on your
+> `PATH`. Restart Unity (and Unity Hub) after installing Git, otherwise the Package Manager reports
+> *"No 'git' executable was found"*.
+
 **Local:** clone the repo and use *Add package from disk…* → `package.json`, or copy the repo folder into
 your project's `Packages/` folder.
 
@@ -256,8 +260,9 @@ cases the plugin shows a **native-looking custom bubble** instead:
 | `Always` | Always the custom bubble — same look and timing everywhere |
 | `Never` | Always the system tooltip — styles are ignored (titles become a plain first line). Touch on WebGL still uses the bubble, since browsers have no touch tooltips |
 
-After updating the package, **rebuild `NativeTooltipsMac.bundle`** (`build_macos.sh`) — version 1.2 (bundle API 3)
-adds rich text and an older bundle is rejected (the plugin falls back to IMGUI with a warning).
+If you change the macOS plugin source (`Source~/NativeTooltipsMac.mm`), **rebuild `NativeTooltipsMac.bundle`**
+(`build_macos.sh`, or the *Build macOS bundle* GitHub workflow). The C# side checks the bundle's API version
+(currently 3) and rejects a bundle that doesn't match — the plugin then falls back to IMGUI with a warning.
 
 ### Demo
 
@@ -329,7 +334,6 @@ The repository root **is** the package root, so it can be installed straight fro
 UnityNativeTooltips/
 ├── package.json
 ├── README.md                      (+ .meta)
-├── CHANGELOG.md                   (+ .meta)
 ├── LICENSE                        (+ .meta)
 ├── .github/workflows/
 │   └── build-macos-bundle.yml     builds NativeTooltipsMac.bundle on a GitHub macOS runner
